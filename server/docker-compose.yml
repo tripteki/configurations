@@ -1,0 +1,366 @@
+version: "3"
+
+secrets:
+
+  memory:
+
+    file: .secret/memory
+
+  database_mssql:
+
+    file: .secret/database_mssql
+
+  database_mysql:
+
+    file: .secret/database_mysql
+
+  database_postgresql:
+
+    file: .secret/database_postgresql
+
+  database_mongonosql:
+
+    file: .secret/database_mongonosql
+
+volumes:
+
+  codebase_frontend:
+
+  codebase_backend:
+
+services:
+
+  codebase_frontend_kit:
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile-frontend.kit"
+      args:
+
+        USER: ${USERID}
+        GROUP: ${GROUPID}
+        APP_TIMEZONE: ${TZ}
+
+        APP_NAME: ${COMPOSE_PROJECT_NAME}
+        APP_ENV: ${COMPOSE_PROJECT_ENV}
+
+    image: "codebase_frontend_kit:latest"
+    entrypoint: []
+    command: ["tail", "-f", "/dev/null"]
+
+  codebase_backend_kit:
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile-backend.kit"
+      args:
+
+        USER: ${USERID}
+        GROUP: ${GROUPID}
+        TZ: ${TZ}
+
+        NODE_NAME: ${COMPOSE_PROJECT_NAME}
+        NODE_ENV: ${COMPOSE_PROJECT_ENV}
+
+    image: "codebase_backend_kit:latest"
+    entrypoint: []
+    command: ["tail", "-f", "/dev/null"]
+
+  codebase_frontend:
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile-frontend"
+
+    image: "${COMPOSE_PROJECT_NAME}_frontend:latest"
+    container_name: "${COMPOSE_PROJECT_NAME}_frontend"
+
+    volumes:
+
+      - codebase_frontend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    restart: always
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    expose:
+
+      - 9000
+
+    depends_on:
+
+      - codebase_frontend_kit
+      - codebase_backend
+
+  codebase_backend:
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile-backend"
+
+    image: "${COMPOSE_PROJECT_NAME}_backend:latest"
+    container_name: "${COMPOSE_PROJECT_NAME}_backend"
+
+    volumes:
+
+      - codebase_backend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    restart: always
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    expose:
+
+      - 9000
+
+    depends_on:
+
+      - codebase_backend_kit
+      - memory
+      - database_mssql
+      - database_mysql
+      - database_postgresql
+      - database_mongonosql
+      - mail
+
+  server_codebase_frontend:
+
+    image: nginx:1.25.4-alpine3.18
+
+    volumes:
+
+      # - /etc/letsencrypt/archive/frontend.test/:/etc/letsencrypt/live/frontend.test/ #
+      - ./storage/server/frontend.conf:/etc/nginx/templates/default.conf.template
+      - codebase_frontend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    ports:
+
+      - ${SERVER_FRONTEND_PORT}:80
+      - ${SERVER_FRONTEND_SECURE_PORT}:443
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      NAME: ${COMPOSE_PROJECT_NAME}
+
+    depends_on:
+
+      - codebase_frontend
+
+  server_codebase_backend:
+
+    image: nginx:1.25.4-alpine3.18
+
+    volumes:
+
+      # - /etc/letsencrypt/archive/backend.test/:/etc/letsencrypt/live/backend.test/ #
+      - ./storage/server/backend.conf:/etc/nginx/templates/default.conf.template
+      - codebase_backend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    ports:
+
+      - ${SERVER_BACKEND_PORT}:80
+      - ${SERVER_BACKEND_SECURE_PORT}:443
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      NAME: ${COMPOSE_PROJECT_NAME}
+
+    depends_on:
+
+      - codebase_backend
+
+  memory:
+
+    image: redis:7.2.4
+
+    volumes:
+
+      - ./storage/redis:/data
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    ports:
+
+      - ${MEMORY_PORT}:6379
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      REDIS_PASSWORD_FILE: /run/secrets/memory
+
+    secrets:
+
+      - memory
+
+    command: ["bash", "-c", 'docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)"']
+
+  database_mssql:
+
+    image: mcr.microsoft.com/mssql/server:2022-latest
+
+    volumes:
+
+      - ./migration/mssql_dump.sql:/docker-entrypoint-initdb.d/dump.sql
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    ports:
+
+      - ${DATABASE_MSSQL_PORT}:1433
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      MSSQL_DATABASE: ${DATABASE_NAME}
+      MSSQL_USER: ${DATABASE_USERNAME}
+      MSSQL_SA_PASSWORD_FILE: /run/secrets/database_mssql
+      MSSQL_AGENT_ENABLED: "true"
+      ACCEPT_EULA: "Y"
+
+    secrets:
+
+      - database_mssql
+
+    command:
+
+      - /bin/bash
+      - -c
+      - /opt/mssql/bin/sqlservr & sleep 30 && /opt/mssql-tools/bin/sqlcmd -U $$MSSQL_USER -P $$(cat $$MSSQL_SA_PASSWORD_FILE) -i /docker-entrypoint-initdb.d/dump.sql
+
+  database_mysql:
+
+    image: mariadb:11.3.2
+
+    volumes:
+
+      - ./storage/mysql:/var/lib/mysql
+      - ./migration/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    ports:
+
+      - ${DATABASE_MYSQL_PORT}:3306
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      MARIADB_ROOT_HOST: "%"
+      MARIADB_DATABASE: ${DATABASE_NAME}
+      MARIADB_USER: ${DATABASE_USERNAME}
+      MARIADB_PASSWORD_FILE: /run/secrets/database_mysql
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/database_mysql
+
+    secrets:
+
+      - database_mysql
+
+    command: ["--max_allowed_packet=32G"]
+
+  database_postgresql:
+
+    image: postgres:14.11
+
+    volumes:
+
+      - ./storage/postgresql:/var/lib/postgresql
+      - ./migration/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    ports:
+
+      - ${DATABASE_POSTGRESQL_PORT}:5432
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_postgresql
+
+    secrets:
+
+      - database_postgresql
+
+  database_mongonosql:
+
+    image: mongo:7.0.5
+
+    volumes:
+
+      - ./storage/mongodb:/data/db
+      - ./migration/dump.js:/docker-entrypoint-initdb.d/dump.js
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    ports:
+
+      - ${DATABASE_MONGONOSQL_PORT}:27017
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      MONGO_INITDB_DATABASE: ${DATABASE_NAME}
+      MONGO_INITDB_ROOT_USERNAME: ${DATABASE_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/database_mongonosql
+
+    secrets:
+
+      - database_mongonosql
+
+  mail:
+
+    image: mailhog/mailhog:v1.0.1
+
+    ports:
+
+      - 1025:1025
+      - 8025:8025
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}

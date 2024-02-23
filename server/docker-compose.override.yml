@@ -1,0 +1,110 @@
+version: "3"
+
+services:
+
+  memory_commander:
+
+    image: ghcr.io/joeferner/redis-commander:latest
+
+    ports:
+
+      - ${MEMORY_COMMANDER_PORT}:8081
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      REDIS_HOST: memory
+      REDIS_PASSWORD_FILE: /run/secrets/memory
+      HTTP_USER: ${DATABASE_USERNAME}
+      HTTP_PASSWORD_FILE: /run/secrets/memory
+
+    secrets:
+
+      - memory
+
+    depends_on:
+
+      - memory
+
+  database_mssql_adminer:
+
+    image: adminer:latest
+
+    ports:
+
+      - ${DATABASE_MSSQL_ADMINER_PORT}:8080
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      ADMINER_DEFAULT_SERVER: database_mssql
+
+    secrets:
+
+      - database_mssql
+
+    depends_on:
+
+      - database_mssql
+
+  database_mysql_phpmyadmin:
+
+    image: phpmyadmin/phpmyadmin:latest
+
+    ports:
+
+      - ${DATABASE_MYSQL_PHPMYADMIN_PORT}:80
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      PMA_HOST: database_mysql
+      # PMA_CONTROLUSER: ${DATABASE_USERNAME} #
+      # PMA_CONTROLPASS_FILE: /run/secrets/database_mysql #
+      UPLOAD_LIMIT: 32G
+
+    secrets:
+
+      - database_mysql
+
+    depends_on:
+
+      - database_mysql
+
+  database_postgresql_pgadmin:
+
+    image: dpage/pgadmin4:latest
+
+    volumes:
+
+      - ./storage/postgresql/servers.json:/pgadmin4/servers.json
+
+    ports:
+
+      - ${DATABASE_POSTGRESQL_PGADMIN_PORT}:80
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      PGADMIN_DEFAULT_EMAIL: ${DATABASE_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/database_postgresql
+
+    secrets:
+
+      - database_postgresql
+
+    depends_on:
+
+      - database_postgresql

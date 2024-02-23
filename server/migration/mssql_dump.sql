@@ -1,0 +1,13 @@
+CREATE DATABASE $(MSSQL_DATABASE);
+GO
+
+use $(MSSQL_DATABASE);
+GO
+
+CREATE TABLE users (
+
+    id CHAR (32),
+
+    PRIMARY KEY (id)
+);
+GO
