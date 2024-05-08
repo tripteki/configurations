@@ -1,4 +1,4 @@
-FROM codebase_backend_kit:latest as codebase
+FROM tripteki/codebase_backend_kit:latest as codebase
 
     COPY ./codebase/backend .
     # RUN chgrp -R www-data bootstrap/cache storage && chmod -R ug+rwx bootstrap/cache storage #
