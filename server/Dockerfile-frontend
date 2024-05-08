@@ -1,4 +1,4 @@
-FROM codebase_frontend_kit:latest as codebase
+FROM tripteki/codebase_frontend_kit:latest as codebase
 
     COPY ./codebase/frontend .
     RUN if [ -e package.json ]; then npm install --legacy-peer-deps; fi;
