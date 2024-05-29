@@ -6,21 +6,9 @@ secrets:
 
     file: .secret/memory
 
-  database_mssql:
-
-    file: .secret/database_mssql
-
-  database_mysql:
-
-    file: .secret/database_mysql
-
   database_postgresql:
 
     file: .secret/database_postgresql
-
-  database_mongonosql:
-
-    file: .secret/database_mongonosql
 
 volumes:
 
@@ -125,10 +113,7 @@ services:
 
       - codebase_backend_kit
       - memory
-      - database_mssql
-      - database_mysql
       - database_postgresql
-      - database_mongonosql
       - mail
 
   server_codebase_frontend:
@@ -215,79 +200,6 @@ services:
 
     command: ["bash", "-c", 'docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)"']
 
-  database_mssql:
-
-    image: mcr.microsoft.com/mssql/server:2022-latest
-
-    volumes:
-
-      - ./migration/mssql_dump.sql:/docker-entrypoint-initdb.d/dump.sql
-
-    extra_hosts:
-
-      - "host.docker.internal:host-gateway"
-
-    ports:
-
-      - ${DATABASE_MSSQL_PORT}:1433
-
-    restart: always
-
-    environment:
-
-      TZ: ${TZ}
-
-      MSSQL_DATABASE: ${DATABASE_NAME}
-      MSSQL_USER: ${DATABASE_USERNAME}
-      MSSQL_SA_PASSWORD_FILE: /run/secrets/database_mssql
-      MSSQL_AGENT_ENABLED: "true"
-      ACCEPT_EULA: "Y"
-
-    secrets:
-
-      - database_mssql
-
-    command:
-
-      - /bin/bash
-      - -c
-      - /opt/mssql/bin/sqlservr & sleep 30 && /opt/mssql-tools/bin/sqlcmd -U $$MSSQL_USER -P $$(cat $$MSSQL_SA_PASSWORD_FILE) -i /docker-entrypoint-initdb.d/dump.sql
-
-  database_mysql:
-
-    image: mariadb:11.3.2
-
-    volumes:
-
-      - ./storage/mysql:/var/lib/mysql
-      - ./migration/dump.sql:/docker-entrypoint-initdb.d/dump.sql
-
-    extra_hosts:
-
-      - "host.docker.internal:host-gateway"
-
-    ports:
-
-      - ${DATABASE_MYSQL_PORT}:3306
-
-    restart: always
-
-    environment:
-
-      TZ: ${TZ}
-
-      MARIADB_ROOT_HOST: "%"
-      MARIADB_DATABASE: ${DATABASE_NAME}
-      MARIADB_USER: ${DATABASE_USERNAME}
-      MARIADB_PASSWORD_FILE: /run/secrets/database_mysql
-      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/database_mysql
-
-    secrets:
-
-      - database_mysql
-
-    command: ["--max_allowed_packet=32G"]
-
   database_postgresql:
 
     image: postgres:14.11
@@ -318,37 +230,6 @@ services:
     secrets:
 
       - database_postgresql
-
-  database_mongonosql:
-
-    image: mongo:7.0.5
-
-    volumes:
-
-      - ./storage/mongodb:/data/db
-      - ./migration/dump.js:/docker-entrypoint-initdb.d/dump.js
-
-    extra_hosts:
-
-      - "host.docker.internal:host-gateway"
-
-    ports:
-
-      - ${DATABASE_MONGONOSQL_PORT}:27017
-
-    restart: always
-
-    environment:
-
-      TZ: ${TZ}
-
-      MONGO_INITDB_DATABASE: ${DATABASE_NAME}
-      MONGO_INITDB_ROOT_USERNAME: ${DATABASE_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/database_mongonosql
-
-    secrets:
-
-      - database_mongonosql
 
   mail:
 
