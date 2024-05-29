@@ -92,7 +92,7 @@ services:
 
       - 9000
 
-    depends_on:
+    links:
 
       - codebase_frontend_kit
       - codebase_backend
@@ -121,7 +121,7 @@ services:
 
       - 9000
 
-    depends_on:
+    links:
 
       - codebase_backend_kit
       - memory
@@ -154,7 +154,7 @@ services:
 
       NAME: ${COMPOSE_PROJECT_NAME}
 
-    depends_on:
+    links:
 
       - codebase_frontend
 
@@ -181,7 +181,7 @@ services:
 
       NAME: ${COMPOSE_PROJECT_NAME}
 
-    depends_on:
+    links:
 
       - codebase_backend
 
