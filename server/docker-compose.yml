@@ -18,43 +18,43 @@ volumes:
 
 services:
 
-  codebase_frontend_kit:
+  #codebase_frontend_kit:
 
-    build:
+    #build:
 
-      context: "./"
-      dockerfile: "Dockerfile-frontend.kit"
-      args:
+      #context: "./"
+      #dockerfile: "Dockerfile-frontend.kit"
+      #args:
 
-        USER: ${USERID}
-        GROUP: ${GROUPID}
-        APP_TIMEZONE: ${TZ}
+        #USER: ${USERID}
+        #GROUP: ${GROUPID}
+        #APP_TIMEZONE: ${TZ}
 
-        APP_NAME: ${COMPOSE_PROJECT_NAME}
-        APP_ENV: ${COMPOSE_PROJECT_ENV}
+        #APP_NAME: ${COMPOSE_PROJECT_NAME}
+        #APP_ENV: ${COMPOSE_PROJECT_ENV}
 
-    image: "codebase_frontend_kit:latest"
-    entrypoint: []
-    command: ["tail", "-f", "/dev/null"]
+    #image: "codebase_frontend_kit:latest"
+    #entrypoint: []
+    #command: ["tail", "-f", "/dev/null"]
 
-  codebase_backend_kit:
+  #codebase_backend_kit:
 
-    build:
+    #build:
 
-      context: "./"
-      dockerfile: "Dockerfile-backend.kit"
-      args:
+      #context: "./"
+      #dockerfile: "Dockerfile-backend.kit"
+      #args:
 
-        USER: ${USERID}
-        GROUP: ${GROUPID}
-        TZ: ${TZ}
+        #USER: ${USERID}
+        #GROUP: ${GROUPID}
+        #TZ: ${TZ}
 
-        NODE_NAME: ${COMPOSE_PROJECT_NAME}
-        NODE_ENV: ${COMPOSE_PROJECT_ENV}
+        #NODE_NAME: ${COMPOSE_PROJECT_NAME}
+        #NODE_ENV: ${COMPOSE_PROJECT_ENV}
 
-    image: "codebase_backend_kit:latest"
-    entrypoint: []
-    command: ["tail", "-f", "/dev/null"]
+    #image: "codebase_backend_kit:latest"
+    #entrypoint: []
+    #command: ["tail", "-f", "/dev/null"]
 
   codebase_frontend:
 
@@ -82,7 +82,7 @@ services:
 
     links:
 
-      - codebase_frontend_kit
+      #- codebase_frontend_kit
       - codebase_backend
 
   codebase_backend:
@@ -111,7 +111,7 @@ services:
 
     links:
 
-      - codebase_backend_kit
+      #- codebase_backend_kit
       - memory
       - database_mongonosql
       - mail
