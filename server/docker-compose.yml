@@ -6,6 +6,27 @@ volumes:
 
 services:
 
+  monitor_exporter_log:
+
+    image: grafana/promtail:main-00d3c7a
+
+    volumes:
+
+      - ./storage/_monitor/promtail/promtail.yml:/etc/promtail/docker-config.yml
+      - ./storage/log/:/var/log/
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+    command: -config.file=/etc/promtail/docker-config.yml
+
+    depends_on:
+
+      - monitor_loki
+
   monitor_exporter_node:
 
     image: prom/node-exporter:v1.7.0
@@ -32,6 +53,22 @@ services:
       - "--path.rootfs=/rootfs"
       - "--path.sysfs=/host/sys"
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+
+  monitor_loki:
+
+    image: grafana/loki:main-00d3c7a
+
+    restart: always
+
+    ports:
+
+      - 3100:3100
+
+    environment:
+
+      TZ: ${TZ}
+
+    command: -config.file=/etc/loki/local-config.yaml
 
   monitor_prometheus:
 

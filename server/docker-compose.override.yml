@@ -44,3 +44,4 @@ services:
     depends_on:
 
       - monitor_prometheus
+      - monitor_loki
