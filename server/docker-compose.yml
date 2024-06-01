@@ -2,101 +2,79 @@ version: "3"
 
 volumes:
 
-  monitor_node:
+  elasticsearch:
+
+  logstash:
+
+  kibana:
 
 services:
 
-  monitor_exporter_log:
+  elasticsearch:
 
-    image: grafana/promtail:main-00d3c7a
+    image: elasticsearch:8.13.4
 
     volumes:
 
-      - ./storage/_monitor/promtail/promtail.yml:/etc/promtail/docker-config.yml
-      - ./storage/log/:/var/log/
+      - elasticsearch:/usr/share/elasticsearch/data
+      - ./storage/_monitor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 
     restart: always
 
     environment:
 
-      TZ: ${TZ}
+      - TZ=${TZ}
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
 
-    command: -config.file=/etc/promtail/docker-config.yml
+    ports:
+
+      - 9200:9200
+
+  logstash:
+
+    image: logstash:8.13.4
+
+    volumes:
+
+      - logstash:/usr/share/logstash/data
+      - ./storage/_monitor/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./storage/_monitor/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+
+    restart: always
+
+    environment:
+
+      - TZ=${TZ}
+
+    ports:
+
+      - 5044:5044
 
     depends_on:
 
-      - monitor_loki
+      - elasticsearch
 
-  monitor_exporter_node:
+  kibana:
 
-    image: prom/node-exporter:v1.7.0
-
-    volumes:
-
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-
-    ports:
-
-      - 9100:9100
-
-    restart: always
-
-    environment:
-
-      TZ: ${TZ}
-
-    command:
-
-      - "--path.procfs=/host/proc"
-      - "--path.rootfs=/rootfs"
-      - "--path.sysfs=/host/sys"
-      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
-
-  monitor_loki:
-
-    image: grafana/loki:main-00d3c7a
-
-    restart: always
-
-    ports:
-
-      - 3100:3100
-
-    environment:
-
-      TZ: ${TZ}
-
-    command: -config.file=/etc/loki/local-config.yaml
-
-  monitor_prometheus:
-
-    image: prom/prometheus:v2.50.0
+    image: kibana:8.13.4
 
     volumes:
 
-      - monitor_node:/prometheus
-      - ./storage/_monitor/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-
-    ports:
-
-      - 9090:9090
+      - kibana:/usr/share/kibana/data
+      - ./storage/_monitor/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
 
     restart: always
 
     environment:
 
-      TZ: ${TZ}
+      - TZ=${TZ}
 
-    command:
+    ports:
 
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/etc/prometheus/console_libraries"
-      - "--web.console.templates=/etc/prometheus/consoles"
-      - "--web.enable-lifecycle"
+      - 5601:5601
 
     depends_on:
 
-      - monitor_exporter_node
+      - elasticsearch
