@@ -3,7 +3,7 @@
 
         {
             "name": "codebase",
-            "instances": "max",
+            "instances": "1",
             "exec_mode": "fork",
             "script": "node index.js",
             "out_file": "/dev/stdout",
