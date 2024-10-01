@@ -1,0 +1,122 @@
+version: "3"
+
+volumes:
+
+  codebase_frontend:
+
+  codebase_backend:
+
+services:
+
+  codebase_frontend:
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile-frontend"
+
+    image: "${COMPOSE_PROJECT_NAME}_frontend:latest"
+    container_name: "${COMPOSE_PROJECT_NAME}_frontend"
+
+    volumes:
+
+      - codebase_frontend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    restart: always
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    expose:
+
+      - 9000
+
+    links:
+
+      - codebase_backend
+
+  codebase_backend:
+
+    build:
+
+      context: "./"
+      dockerfile: "Dockerfile-backend"
+
+    image: "${COMPOSE_PROJECT_NAME}_backend:latest"
+    container_name: "${COMPOSE_PROJECT_NAME}_backend"
+
+    volumes:
+
+      - codebase_backend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    restart: always
+
+    extra_hosts:
+
+      - "host.docker.internal:host-gateway"
+
+    expose:
+
+      - 9000
+
+    #links:
+
+      #- memory
+      #- database
+      #- mail
+
+  server_codebase_frontend:
+
+    image: nginx:1.25.4-alpine3.18
+
+    volumes:
+
+      # - /etc/letsencrypt/archive/frontend.test/:/etc/letsencrypt/live/frontend.test/ #
+      - ../server/storage/server/frontend.conf:/etc/nginx/templates/default.conf.template
+      - codebase_frontend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    ports:
+
+      - ${SERVER_FRONTEND_PORT}:80
+      - ${SERVER_FRONTEND_SECURE_PORT}:443
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      NAME: ${COMPOSE_PROJECT_NAME}
+
+    links:
+
+      - codebase_backend
+      - codebase_frontend
+
+  server_codebase_backend:
+
+    image: nginx:1.25.4-alpine3.18
+
+    volumes:
+
+      # - /etc/letsencrypt/archive/backend.test/:/etc/letsencrypt/live/backend.test/ #
+      - ../server/storage/server/backend.conf:/etc/nginx/templates/default.conf.template
+      - codebase_backend:/var/www/${COMPOSE_PROJECT_NAME}/
+
+    ports:
+
+      - ${SERVER_BACKEND_PORT}:80
+      - ${SERVER_BACKEND_SECURE_PORT}:443
+
+    restart: always
+
+    environment:
+
+      TZ: ${TZ}
+
+      NAME: ${COMPOSE_PROJECT_NAME}
+
+    links:
+
+      - codebase_backend
